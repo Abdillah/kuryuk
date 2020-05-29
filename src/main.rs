@@ -17,7 +17,7 @@ mod schema;
 
 use crate::response::Response;
 use crate::model::Transaction;
-    
+
 pub fn diesel_connect() -> diesel::sqlite::SqliteConnection {
     dotenv::dotenv().ok();
 
@@ -25,6 +25,48 @@ pub fn diesel_connect() -> diesel::sqlite::SqliteConnection {
         .expect("DATABASE_URL must be set");
     diesel::sqlite::SqliteConnection::establish(&database_url)
         .expect(&format!("Error connecting to {}", database_url))
+}
+
+async fn get_transactions(req: HttpRequest) -> HttpResponse {
+    use crate::diesel::ExpressionMethods;
+    use crate::schema::transactions;
+    use crate::schema::transactions::dsl;
+
+    let dbconn = diesel_connect();
+    let req_id = req.match_info().get("id");
+
+    let mut q_transactions = transactions::table.into_boxed();
+    if let Some(req_id) = req_id {
+        let req_id = req_id.to_string().parse::<i32>().expect("Parse error");
+        q_transactions = q_transactions.filter(dsl::id.eq(req_id)).limit(1)
+    }
+
+    match q_transactions.load::<Transaction>(&dbconn) {
+        Ok(results) => if req_id.is_some() && results.len() > 0 {
+            response::Data::<&Transaction> {
+                status: StatusCode::OK,
+                data: results.first().unwrap(),
+            }.as_response()
+        } else if req_id.is_none() {
+            response::Data::<Vec<&Transaction>> {
+                status: StatusCode::OK,
+                data: results.iter().map(|x| x).collect(),
+            }.as_response()
+        } else {
+            response::Error {
+                status: StatusCode::NOT_FOUND,
+                title: "Transaction not found".to_string(),
+                message: "Transaction not found".to_string(),
+                ..Default::default()
+            }.as_response()
+        },
+        Err(msg) => response::Error {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            title: msg.to_string(),
+            message: msg.to_string(),
+            ..Default::default()
+        }.as_response(),
+    }
 }
 
 async fn create_transaction(transaction: actix_web::web::Json<Transaction>) -> HttpResponse {
@@ -54,40 +96,29 @@ async fn create_transaction(transaction: actix_web::web::Json<Transaction>) -> H
     }
 }
 
-async fn get_transactions(req: HttpRequest) -> HttpResponse {
-    use crate::model::TransactionQuery;
+async fn update_transaction(req: HttpRequest, transaction: actix_web::web::Json<Transaction>) -> HttpResponse {
     use crate::diesel::ExpressionMethods;
-    use crate::schema::transactions;
     use crate::schema::transactions::dsl;
 
-    let dbconn = diesel_connect();
     let req_id = req.match_info().get("id");
-
-    let mut q_transactions = transactions::table.into_boxed();
-    if let Some(req_id) = req_id {
-        let req_id = req_id.to_string().parse::<i32>().expect("Parse error");
-        q_transactions = q_transactions.filter(dsl::id.eq(req_id)).limit(1)
+    if req_id.is_none() {
+        return response::Error {
+            status: StatusCode::BAD_REQUEST,
+            title: "Parameter `id` not defined".to_string(),
+            message: "Parameter `id` not defined".to_string(),
+            ..Default::default()
+        }.as_response();
     }
+    let req_id = req_id.unwrap().to_string().parse::<i32>().expect("Parse error");
 
-    match q_transactions.load::<TransactionQuery>(&dbconn) {
-        Ok(results) => if req_id.is_some() && results.len() > 0 {
-            response::Data::<Transaction> {
-                status: StatusCode::OK,
-                data: results.first().unwrap().into(),
-            }.as_response()
-        } else if req_id.is_none() {
-            response::Data::<Vec<Transaction>> {
-                status: StatusCode::OK,
-                data: results.iter().map(|x| x.into()).collect(),
-            }.as_response()
-        } else {
-            response::Error {
-                status: StatusCode::NOT_FOUND,
-                title: "Transaction not found".to_string(),
-                message: "Transaction not found".to_string(),
-                ..Default::default()
-            }.as_response()
-        },
+    let dbconn = diesel_connect();
+    match diesel::update(dsl::transactions.find(req_id))
+    .set((dsl::title.eq(transaction.title.clone()), dsl::description.eq(transaction.description.clone())))
+    .execute(&dbconn) {
+        Ok(_) => response::Data::<Vec<Transaction>> {
+            status: StatusCode::OK,
+            data: vec!(),
+        }.as_response(),
         Err(msg) => response::Error {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             title: msg.to_string(),
@@ -97,12 +128,33 @@ async fn get_transactions(req: HttpRequest) -> HttpResponse {
     }
 }
 
-async fn update_transaction() -> HttpResponse {
-    HttpResponse::Ok().body("data")
-}
+async fn delete_transaction(req: HttpRequest) -> HttpResponse {
+    use crate::schema::transactions::dsl;
 
-async fn delete_transaction() -> HttpResponse {
-    HttpResponse::Ok().body("data")
+    let req_id = req.match_info().get("id");
+    if req_id.is_none() {
+        return response::Error {
+            status: StatusCode::BAD_REQUEST,
+            title: "Parameter `id` not defined".to_string(),
+            message: "Parameter `id` not defined".to_string(),
+            ..Default::default()
+        }.as_response();
+    }
+    let req_id = req_id.unwrap().to_string().parse::<i32>().expect("Parse error");
+
+    let dbconn = diesel_connect();
+    match diesel::delete(dsl::transactions.find(req_id)).execute(&dbconn) {
+        Ok(_) => response::Data::<Vec<Transaction>> {
+            status: StatusCode::OK,
+            data: vec!(),
+        }.as_response(),
+        Err(msg) => response::Error {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            title: msg.to_string(),
+            message: msg.to_string(),
+            ..Default::default()
+        }.as_response(),
+    }
 }
 
 #[actix_rt::main]
@@ -113,10 +165,10 @@ async fn main() -> std::io::Result<()> {
         App::new()
         .wrap(middleware::Compress::default())
         .route("/transactions", web::get().to(get_transactions))
-        .route("/transactions/{id:[0-9]{1,5}}", web::get().to(get_transactions))
         .route("/transactions", web::post().to(create_transaction))
-        .route("/transactions", web::patch().to(update_transaction))
-        .route("/transactions", web::delete().to(delete_transaction))
+        .route("/transactions/{id:[0-9]{1,5}}", web::get().to(get_transactions))
+        .route("/transactions/{id:[0-9]{1,5}}", web::patch().to(update_transaction))
+        .route("/transactions/{id:[0-9]{1,5}}", web::delete().to(delete_transaction))
     })
     .bind("127.0.0.1:9090")?
     .run()
