@@ -6,8 +6,7 @@ use std::convert::TryInto;
 use std::default::Default;
 
 use actix_web::{middleware, HttpRequest, HttpResponse, http::StatusCode};
-use diesel::query_dsl::*;
-// use diesel::prelude::*;
+use diesel::prelude::*;
 use diesel::connection::Connection;
 
 mod response;
@@ -28,7 +27,6 @@ pub fn diesel_connect() -> diesel::sqlite::SqliteConnection {
 }
 
 async fn get_transactions(req: HttpRequest) -> HttpResponse {
-    use crate::diesel::ExpressionMethods;
     use crate::schema::transactions;
     use crate::schema::transactions::dsl;
 
@@ -97,7 +95,6 @@ async fn create_transaction(transaction: actix_web::web::Json<Transaction>) -> H
 }
 
 async fn update_transaction(req: HttpRequest, transaction: actix_web::web::Json<Transaction>) -> HttpResponse {
-    use crate::diesel::ExpressionMethods;
     use crate::schema::transactions::dsl;
 
     let req_id = req.match_info().get("id");
