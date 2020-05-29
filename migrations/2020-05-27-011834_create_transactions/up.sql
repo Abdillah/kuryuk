@@ -3,8 +3,8 @@ CREATE TABLE transactions (
     `trx_id` TEXT NOT NULL,
     `title` TEXT NOT NULL,
     `description` TEXT NOT NULL,
-    `updated_at` TIMESTAMP NOT NULL,
-    `created_at` TIMESTAMP NOT NULL
+    `updated_at` TIMESTAMP,
+    `created_at` TIMESTAMP
 );
 
 CREATE TABLE categories (

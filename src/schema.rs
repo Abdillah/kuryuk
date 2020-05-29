@@ -23,8 +23,8 @@ table! {
         trx_id -> Text,
         title -> Text,
         description -> Text,
-        updated_at -> Timestamp,
-        created_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+        created_at -> Nullable<Timestamp>,
     }
 }
 
