@@ -72,12 +72,12 @@ async fn get_transactions(req: HttpRequest) -> HttpResponse {
     match q_transactions.load::<TransactionQuery>(&dbconn) {
         Ok(results) => if req_id.is_some() && results.len() > 0 {
             response::Data::<Transaction> {
-                status: StatusCode::ACCEPTED,
+                status: StatusCode::OK,
                 data: results.first().unwrap().into(),
             }.as_response()
         } else if req_id.is_none() {
             response::Data::<Vec<Transaction>> {
-                status: StatusCode::ACCEPTED,
+                status: StatusCode::OK,
                 data: results.iter().map(|x| x.into()).collect(),
             }.as_response()
         } else {
