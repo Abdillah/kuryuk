@@ -1,22 +1,22 @@
 CREATE TABLE transactions (
-    `id` INT NOT NULL PRIMARY KEY,
-    `trx_id` VARCHAR(255) NOT NULL,
-    `title` VARCHAR(255) NOT NULL,
-    `description` VARCHAR(1024) NOT NULL,
+    `id` INTEGER PRIMARY KEY,
+    `trx_id` TEXT NOT NULL,
+    `title` TEXT NOT NULL,
+    `description` TEXT NOT NULL,
     `updated_at` TIMESTAMP NOT NULL,
     `created_at` TIMESTAMP NOT NULL
 );
 
 CREATE TABLE categories (
-    `id` INT NOT NULL PRIMARY KEY,
-    `type` VARCHAR(255) NOT NULL,
-    `icon` VARCHAR(255) NOT NULL,
-    `title` VARCHAR(255) NOT NULL,
-    `description` VARCHAR(1024) NOT NULL
+    `id` INTEGER PRIMARY KEY,
+    `type` TEXT NOT NULL,
+    `icon` TEXT NOT NULL,
+    `title` TEXT NOT NULL,
+    `description` TEXT NOT NULL
 );
 
 CREATE TABLE transaction_category (
-    `id` INT NOT NULL PRIMARY KEY,
-    `transaction_id` INT NOT NULL,
-    `category_id` INT NOT NULL
+    `id` INTEGER PRIMARY KEY,
+    `transaction_id` INTEGER NOT NULL,
+    `category_id` INTEGER NOT NULL
 );

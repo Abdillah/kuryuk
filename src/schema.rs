@@ -1,6 +1,6 @@
 table! {
     categories (id) {
-        id -> Integer,
+        id -> Nullable<Integer>,
         #[sql_name = "type"]
         type_ -> Text,
         icon -> Text,
@@ -11,7 +11,7 @@ table! {
 
 table! {
     transaction_category (id) {
-        id -> Integer,
+        id -> Nullable<Integer>,
         transaction_id -> Integer,
         category_id -> Integer,
     }
@@ -19,7 +19,7 @@ table! {
 
 table! {
     transactions (id) {
-        id -> Integer,
+        id -> Nullable<Integer>,
         trx_id -> Text,
         title -> Text,
         description -> Text,
