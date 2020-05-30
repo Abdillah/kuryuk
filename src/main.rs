@@ -75,9 +75,9 @@ async fn get_transactions(req: HttpRequest) -> HttpResponse {
 }
 
 async fn create_transaction(body: actix_web::web::Json<model::TransactionCreateRequest>) -> HttpResponse {
+    use crate::model::Model;
     use self::schema::transactions;
     use self::schema::transaction_category;
-    use self::schema::categories;
 
     let dbconn = diesel_connect();
 
@@ -94,20 +94,14 @@ async fn create_transaction(body: actix_web::web::Json<model::TransactionCreateR
     let last_id = query::last_insert_rowid(&dbconn);
 
     if let Some(category_id) = cat_id {
-        let categories: Vec<model::Category> = categories::dsl::categories.filter(categories::dsl::id.eq(category_id))
-        .limit(1)
-        .load(&dbconn)
-        .unwrap();
-        if let Some(category) = categories.first() {
-            if let Some(cat_id) = category.id {
-                diesel::insert_into(transaction_category::table)
-                .values(&model::TransactionCategory {
-                    transaction_id: last_id,
-                    category_id: cat_id,
-                })
-                .execute(&dbconn)
-                .expect("Failed to create transaction_category");
-            }
+        if let Ok(_) = model::Category::find(&dbconn, category_id) {
+            diesel::insert_into(transaction_category::table)
+            .values(&model::TransactionCategory {
+                transaction_id: last_id,
+                category_id: category_id,
+            })
+            .execute(&dbconn)
+            .expect("Failed to create transaction_category");
         }
     }
 

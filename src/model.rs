@@ -101,7 +101,7 @@ impl Model<diesel::sqlite::SqliteConnection> for Transaction {
     }
 }
 
-#[derive(Debug, diesel::Insertable, diesel::Queryable, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, diesel::Insertable, diesel::Queryable, serde::Serialize, serde::Deserialize)]
 #[table_name="categories"]
 pub struct Category {
     pub id: Option<i32>,
@@ -110,6 +110,23 @@ pub struct Category {
     pub type_: TransactionType,
     pub icon: String,
     pub title: String,
+}
+
+impl Model<diesel::sqlite::SqliteConnection> for Category {
+    fn find(conn: &diesel::sqlite::SqliteConnection, id: i32) -> Result<Option<Self>, String> {
+        categories::table.into_boxed()
+        .filter(categories::dsl::id.eq(id))
+        .limit(1)
+        .load(conn)
+        .map(|categories| categories.first().map(|x: &Category| x.clone()))
+        .map_err(|error| format!("{}", error))
+    }
+
+    fn get(conn: &diesel::sqlite::SqliteConnection) -> Result<Vec<Self>, String> {
+        categories::table.load(conn)
+        .map(|categories| categories.iter().map(|x: &Category| x.clone()).collect())
+        .map_err(|error| format!("{}", error))
+    }
 }
 
 #[derive(Debug, diesel::Insertable, diesel::Queryable, serde::Serialize, serde::Deserialize)]
