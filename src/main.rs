@@ -13,6 +13,7 @@ mod response;
 mod model;
 #[macro_use]
 mod schema;
+mod query;
 
 use crate::response::Response;
 use crate::model::Transaction;
@@ -67,21 +68,45 @@ async fn get_transactions(req: HttpRequest) -> HttpResponse {
     }
 }
 
-async fn create_transaction(transaction: actix_web::web::Json<Transaction>) -> HttpResponse {
+async fn create_transaction(body: actix_web::web::Json<model::TransactionCreateRequest>) -> HttpResponse {
     use self::schema::transactions;
+    use self::schema::transaction_category;
+    use self::schema::categories;
 
     let dbconn = diesel_connect();
 
+    let cat_id = body.category_id.clone();
+
     let epocmillis: i64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(std::time::Duration::from_secs(0)).as_secs().try_into().unwrap_or(0);
-    let mut transaction = transaction.into_inner();
+    let mut transaction: model::Transaction = body.into_inner().into();
     transaction.updated_at = Some(chrono::NaiveDateTime::from_timestamp(epocmillis, 0));
     transaction.created_at = Some(chrono::NaiveDateTime::from_timestamp(epocmillis, 0));
 
     let insert_ops = diesel::insert_into(transactions::table)
     .values(&transaction)
     .execute(&dbconn);
+    let last_id = query::last_insert_rowid(&dbconn);
+
+    if let Some(category_id) = cat_id {
+        let categories: Vec<model::Category> = categories::dsl::categories.filter(categories::dsl::id.eq(category_id))
+        .limit(1)
+        .load(&dbconn)
+        .unwrap();
+        if let Some(category) = categories.first() {
+            if let Some(cat_id) = category.id {
+                diesel::insert_into(transaction_category::table)
+                .values(&model::TransactionCategory {
+                    transaction_id: last_id,
+                    category_id: cat_id,
+                })
+                .execute(&dbconn)
+                .expect("Failed to create transaction_category");
+            }
+        }
+    }
+
     match insert_ops {
-        Ok(_) => response::Data::<Transaction> {
+        Ok(_) => response::Data::<model::Transaction> {
             status: StatusCode::ACCEPTED,
             data: transaction,
         }.as_response(),
