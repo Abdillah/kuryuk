@@ -9,7 +9,7 @@ where
     C: diesel::connection::Connection,
 {
     fn find(conn: &C, id: i32) -> Result<Option<Self>, String>;
-    fn get(conn: &C) -> Result<Vec<Self>, String>;
+    fn all(conn: &C) -> Result<Vec<Self>, String>;
 }
 
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
@@ -73,7 +73,7 @@ impl Model<diesel::sqlite::SqliteConnection> for Transaction {
         .map_err(|error| format!("{}", error))
     }
 
-    fn get(conn: &diesel::sqlite::SqliteConnection) -> Result<Vec<Self>, String> {
+    fn all(conn: &diesel::sqlite::SqliteConnection) -> Result<Vec<Self>, String> {
         transactions::table.load(conn)
         .map(|transactions| transactions.iter().map(|x: &Transaction| x.clone()).collect())
         .map_err(|error| format!("{}", error))
@@ -123,7 +123,7 @@ impl Model<diesel::sqlite::SqliteConnection> for Category {
         .map_err(|error| format!("{}", error))
     }
 
-    fn get(conn: &diesel::sqlite::SqliteConnection) -> Result<Vec<Self>, String> {
+    fn all(conn: &diesel::sqlite::SqliteConnection) -> Result<Vec<Self>, String> {
         categories::table.load(conn)
         .map(|categories| categories.iter().map(|x: &Category| x.clone()).collect())
         .map_err(|error| format!("{}", error))

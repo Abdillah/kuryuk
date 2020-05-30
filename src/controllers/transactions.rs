@@ -101,7 +101,7 @@ pub async fn read(req: HttpRequest) -> HttpResponse {
         }
     } else {
         // Multiple entity request
-        match Transaction::get(&dbconn) {
+        match Transaction::all(&dbconn) {
             Ok(transactions) => response::Data::<Vec<model::Transaction>> {
                 status: StatusCode::OK,
                 data: transactions,
