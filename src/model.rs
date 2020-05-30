@@ -50,27 +50,6 @@ impl std::fmt::Display for TransactionType {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct TransactionCreateRequest {
-    pub trx_id: String,
-    pub title: String,
-    pub description: String,
-    pub category_id: Option<i32>,
-}
-
-impl std::convert::Into<Transaction> for TransactionCreateRequest {
-    fn into(self) -> Transaction {
-        Transaction {
-            id: None,
-            trx_id: self.trx_id,
-            title: self.title,
-            description: self.description,
-            created_at: None,
-            updated_at: None,
-        }
-    }
-}
-
 #[derive(Clone, Debug, diesel::Queryable, diesel::Insertable, serde::Serialize, serde::Deserialize)]
 #[table_name="transactions"]
 pub struct Transaction {
@@ -98,6 +77,28 @@ impl Model<diesel::sqlite::SqliteConnection> for Transaction {
         transactions::table.load(conn)
         .map(|transactions| transactions.iter().map(|x: &Transaction| x.clone()).collect())
         .map_err(|error| format!("{}", error))
+    }
+}
+
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TransactionCreateRequest {
+    pub trx_id: String,
+    pub title: String,
+    pub description: String,
+    pub category_id: Option<i32>,
+}
+
+impl std::convert::Into<Transaction> for TransactionCreateRequest {
+    fn into(self) -> Transaction {
+        Transaction {
+            id: None,
+            trx_id: self.trx_id,
+            title: self.title,
+            description: self.description,
+            created_at: None,
+            updated_at: None,
+        }
     }
 }
 
