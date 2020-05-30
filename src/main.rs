@@ -119,7 +119,7 @@ async fn create_transaction(body: actix_web::web::Json<model::TransactionCreateR
     }
 }
 
-async fn update_transaction(req: HttpRequest, transaction: actix_web::web::Json<Transaction>) -> HttpResponse {
+async fn update_transaction(req: HttpRequest, transaction: actix_web::web::Json<model::Transaction>) -> HttpResponse {
     use crate::schema::transactions::dsl;
 
     let req_id = req.match_info().get("id");
@@ -137,7 +137,7 @@ async fn update_transaction(req: HttpRequest, transaction: actix_web::web::Json<
     match diesel::update(dsl::transactions.find(req_id))
     .set((dsl::title.eq(transaction.title.clone()), dsl::description.eq(transaction.description.clone())))
     .execute(&dbconn) {
-        Ok(_) => response::Data::<Vec<Transaction>> {
+        Ok(_) => response::Data::<Vec<model::Transaction>> {
             status: StatusCode::OK,
             data: vec!(),
         }.as_response(),
