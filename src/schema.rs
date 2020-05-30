@@ -1,11 +1,11 @@
 table! {
     categories (id) {
         id -> Nullable<Integer>,
+        parent_id -> Nullable<Integer>,
         #[sql_name = "type"]
         type_ -> Text,
         icon -> Text,
         title -> Text,
-        description -> Text,
     }
 }
 
