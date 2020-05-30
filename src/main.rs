@@ -28,43 +28,49 @@ pub fn diesel_connect() -> diesel::sqlite::SqliteConnection {
 }
 
 async fn get_transactions(req: HttpRequest) -> HttpResponse {
-    use crate::schema::transactions;
-    use crate::schema::transactions::dsl;
+    use crate::model::Model;
 
     let dbconn = diesel_connect();
     let req_id = req.match_info().get("id");
 
-    let mut q_transactions = transactions::table.into_boxed();
     if let Some(req_id) = req_id {
+        // Single entity request
         let req_id = req_id.to_string().parse::<i32>().expect("Parse error");
-        q_transactions = q_transactions.filter(dsl::id.eq(req_id)).limit(1)
-    }
-
-    match q_transactions.load::<Transaction>(&dbconn) {
-        Ok(results) => if req_id.is_some() && results.len() > 0 {
-            response::Data::<&Transaction> {
-                status: StatusCode::OK,
-                data: results.first().unwrap(),
-            }.as_response()
-        } else if req_id.is_none() {
-            response::Data::<Vec<&Transaction>> {
-                status: StatusCode::OK,
-                data: results.iter().map(|x| x).collect(),
-            }.as_response()
-        } else {
-            response::Error {
-                status: StatusCode::NOT_FOUND,
-                title: "Transaction not found".to_string(),
-                message: "Transaction not found".to_string(),
+        match Transaction::find(&dbconn, req_id) {
+            Ok(transaction) => if let Some(transaction) = transaction {
+                response::Data::<model::Transaction> {
+                    status: StatusCode::OK,
+                    data: transaction,
+                }.as_response()
+            } else {
+                response::Error {
+                    status: StatusCode::NOT_FOUND,
+                    title: "Transaction not found".to_string(),
+                    message: "Transaction not found".to_string(),
+                    ..Default::default()
+                }.as_response()
+            },
+            Err(msg) => response::Error {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                title: msg.to_string(),
+                message: msg.to_string(),
                 ..Default::default()
-            }.as_response()
-        },
-        Err(msg) => response::Error {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            title: msg.to_string(),
-            message: msg.to_string(),
-            ..Default::default()
-        }.as_response(),
+            }.as_response(),
+        }
+    } else {
+        // Multiple entity request
+        match Transaction::get(&dbconn) {
+            Ok(transactions) => response::Data::<Vec<model::Transaction>> {
+                status: StatusCode::OK,
+                data: transactions,
+            }.as_response(),
+            Err(msg) => response::Error {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                title: msg.to_string(),
+                message: msg.to_string(),
+                ..Default::default()
+            }.as_response(),
+        }
     }
 }
 
