@@ -11,16 +11,9 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-      - on: push
-
-jobs:
-  one:
-    runs-on: ubuntu-16.04
-    steps:
+    - on: push
     - name: Dump GitHub context
       env:
         GITHUB_CONTEXT: ${{ toJson(github) }}
